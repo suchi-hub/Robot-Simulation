@@ -306,7 +306,6 @@ for i in np.arange(end_effector_path.shape[0] -1):            #for loop to call 
   robot_config = NextState(robot_config, joint_speed, delta_t, speed_limit)
   log_robot_config = np.append(log_robot_config, np.append(robot_config, end_effector_path[i][-1]))
 
-
 log_robot_config = log_robot_config.reshape(-1,13)
 np.savetxt('log_robot_config.csv', log_robot_config, fmt='%.6f', delimiter=',')    #saving final configuration with gripper state
 np.savetxt('log_x_error.csv', log_x_error, fmt='%.6f', delimiter=',')              #saving x_error values
