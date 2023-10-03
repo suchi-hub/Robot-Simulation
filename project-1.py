@@ -21,6 +21,10 @@ def NextState(current_config, joint_speed, delta_t, speed_limit):
   speed_limit = speed_limit
   joint_speed[joint_speed > speed_limit] = speed_limit
   joint_speed[joint_speed < -speed_limit] = -speed_limit
+  pos_joint_limit = np.array([3, 1.6, 2.6, 1.8, 2.9])
+  neg_joint_limit = np.array([-3, -1.2, -2.7, -1.8, -2.9])
+  new_joint_angles[np.where(new_joint_angles > pos_joint_limit)] = pos_joint_limit[pos_joint_limit < new_joint_angles]           #joint limit
+  new_joint_angles[np.where(new_joint_angles < neg_joint_limit)] = neg_joint_limit[neg_joint_limit > new_joint_angles]           #joint limit
   F = np.array([[-2.5974, 2.5974, 2.5974, -2.5974],
                 [1,1,1,1],
                 [-1,1,-1,1]])*(0.0475/4)
