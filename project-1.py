@@ -232,19 +232,20 @@ current_refplus1_e_config = np.array([[0,0,1,0.6],            #input T_d+1
                                       [0,0,0,1]])
 
 # defining function FeedbackControl
-def FeedbackControl(current_actual_e_config, current_ref_e_config, current_refplus1_e_config, gain_k_p, gain_k_i, delta_t):
+def FeedbackControl(current_actual_e_config, current_ref_e_config, current_refplus1_e_config, gain_k_p, gain_k_i, delta_t, x_error_integral=0):
   twist_e_desired = (mr.se3ToVec(mr.MatrixLog6(np.matmul(mr.TransInv(current_ref_e_config), current_refplus1_e_config))))/delta_t
   x_error = mr.se3ToVec(mr.MatrixLog6(np.matmul(mr.TransInv(current_actual_e_config), current_ref_e_config)))
 
   twist_e_commanded = (np.matmul(mr.Adjoint(np.matmul(mr.TransInv(current_actual_e_config), current_ref_e_config)), twist_e_desired)
-                      + np.matmul(gain_k_p, x_error) + np.matmul(gain_k_i, x_error*delta_t))
+                      + np.matmul(gain_k_p, x_error) + np.matmul(gain_k_i, (x_error_integral + x_error*delta_t)))
+  x_error_integral = x_error_integral + x_error*delta_t
   J_inv_base_plus_arm = np.around(np.linalg.pinv(J_base_plus_arm, rcond=1e-4), decimals=6)
   # J_inv_base_plus_arm = np.linalg.pinv(J_base_plus_arm)
   calculated_controls_u_thetadot = np.matmul(J_inv_base_plus_arm, twist_e_commanded)
-  return (calculated_controls_u_thetadot, x_error)
+  return (calculated_controls_u_thetadot, x_error, x_error_integral)
 
 # calling function
-(calculated_controls_u_thetadot, x_error) = FeedbackControl(current_actual_e_config, current_ref_e_config, current_refplus1_e_config, gain_k_p, gain_k_i, delta_t)
+(calculated_controls_u_thetadot, x_error, x_error_integral) = FeedbackControl(current_actual_e_config, current_ref_e_config, current_refplus1_e_config, gain_k_p, gain_k_i, delta_t)
 
 """---
 MILESTONE 3 END
@@ -277,9 +278,10 @@ T_b_o = np.array([[1,0,0,0.1662],
                   [0,0,1,0.0026],
                   [0,0,0,1]])
 gain_k_p = np.diag((1,1,1,1,1,1))*1                          #input kP
-gain_k_i = np.diag((1,1,1,1,1,1))*5                           #input kI
+gain_k_i = np.diag((1,1,1,1,1,1))*0.01                           #input kI
 delta_t = 0.01                                                #input delta_t
 speed_limit = 10
+x_error_integral = 0
 
 log_robot_config = np.append(robot_config, 0)
 log_x_error = np.array([[0,0,0,0,0,0]])
@@ -298,7 +300,7 @@ for i in np.arange(end_effector_path.shape[0] -1):            #for loop to call 
   current_ref_e_config = np.concatenate((current_ref_e_config, [[0,0,0,1]]), axis=0)
   current_refplus1_e_config = np.concatenate((end_effector_path[i+1][:9].reshape(3,3), end_effector_path[i+1][9:12].reshape(3,-1)), axis=1)   #input T_d+1
   current_refplus1_e_config = np.concatenate((current_refplus1_e_config, [[0,0,0,1]]), axis=0)
-  (calculated_controls_u_thetadot, x_error) = FeedbackControl(current_actual_e_config, current_ref_e_config, current_refplus1_e_config, gain_k_p, gain_k_i, delta_t)
+  (calculated_controls_u_thetadot, x_error, x_error_integral) = FeedbackControl(current_actual_e_config, current_ref_e_config, current_refplus1_e_config, gain_k_p, gain_k_i, delta_t, x_error_integral)
   log_x_error = np.concatenate((log_x_error, x_error.reshape(1,-1)), axis=0)
   joint_speed = np.concatenate((calculated_controls_u_thetadot[4:], calculated_controls_u_thetadot[:4]))
   robot_config = NextState(robot_config, joint_speed, delta_t, speed_limit)
